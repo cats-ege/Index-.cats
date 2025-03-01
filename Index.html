@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cats Wallet</title>
+    <style>
+        body {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+        }
+        input, button {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #ff9800;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cats Wallet</h1>
+        <h3>지갑 주소:</h3>
+        <p id="walletAddress">-</p>
+        <h3>개인 키:</h3>
+        <p id="privateKeyDisplay">-</p>
+        <h3>잔액:</h3>
+        <p id="balance">0 CAT</p>
+
+        <button onclick="createWallet()">지갑 생성</button>
+        <input type="text" id="privateKey" placeholder="개인 키 입력 후 복구">
+        <button onclick="restoreWallet()">지갑 복구</button>
+
+        <h3>송금</h3>
+        <input type="text" id="recipient" placeholder="받는 사람 주소">
+        <input type="number" id="amount" placeholder="송금할 CAT">
+        <button onclick="sendTransaction()">송금하기</button>
+
+        <h3>채굴</h3>
+        <button onclick="mineBlock()">채굴 시작</button>
+
+        <h3>토큰 발행</h3>
+        <input type="text" id="tokenName" placeholder="토큰 이름">
+        <input type="number" id="tokenAmount" placeholder="발행량">
+        <button onclick="issueToken()">토큰 발행</button>
+    </div>
+
+    <script>
+        let privateKey = localStorage.getItem("privateKey");
+        let walletAddress = localStorage.getItem("walletAddress");
+
+        if (privateKey && walletAddress) {
+            document.getElementById("walletAddress").innerText = walletAddress;
+            document.getElementById("privateKeyDisplay").innerText = privateKey;
+            updateBalance();
+        }
+
+        function createWallet() {
+            fetch("/create_wallet")
+                .then(response => response.json())
+                .then(data => {
+                    privateKey = data.privateKey;
+                    walletAddress = data.address;
+                    localStorage.setItem("privateKey", privateKey);
+                    localStorage.setItem("walletAddress", walletAddress);
+                    document.getElementById("walletAddress").innerText = walletAddress;
+                    document.getElementById("privateKeyDisplay").innerText = privateKey;
+                    updateBalance();
+                });
+        }
+
+        function restoreWallet() {
+            privateKey = document.getElementById("privateKey").value;
+            if (privateKey) {
+                fetch("/restore_wallet", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ privateKey: privateKey })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    walletAddress = data.address;
+                    localStorage.setItem("privateKey", privateKey);
+                    localStorage.setItem("walletAddress", walletAddress);
+                    document.getElementById("walletAddress").innerText = walletAddress;
+                    document.getElementById("privateKeyDisplay").innerText = privateKey;
+                    updateBalance();
+                });
+            }
+        }
+
+        function updateBalance() {
+            fetch(`/balance?address=${walletAddress}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("balance").innerText = data.balance + " CAT";
+                });
+        }
+
+        function sendTransaction() {
+            const recipient = document.getElementById("recipient").value;
+            const amount = document.getElementById("amount").value;
+
+            fetch("/send_transaction", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    privateKey: privateKey,
+                    recipient: recipient,
+                    amount: parseFloat(amount)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                updateBalance();
+            });
+        }
+
+        function mineBlock() {
+            fetch("/mine", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ miner: walletAddress })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("채굴 완료! 새로운 블록이 생성되었습니다.");
+                updateBalance();
+            });
+        }
+
+        function issueToken() {
+            const tokenName = document.getElementById("tokenName").value;
+            const tokenAmount = document.getElementById("tokenAmount").value;
+
+            fetch("/issue_token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    privateKey: privateKey,
+                    tokenName: tokenName,
+                    tokenAmount: parseInt(tokenAmount)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                updateBalance();
+            });
+        }
+const API_URL = "https://cats-blockchain-44plnb9f4-eges-projects-ddeacef1.vercel.app"
+
+       setInterval(updateBalance, 5000)   </script>
+
+</body>
+</html>
